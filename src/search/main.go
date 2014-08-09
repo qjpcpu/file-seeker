@@ -66,8 +66,7 @@ func buildAllIndex(files ...string) {
 }
 
 func getIndexDb(filename string) string {
-    dir, _ := os.Getwd()
-    return dir + "/.file-seeker/" + filepath.Base(filename)
+    return os.Getenv("HOME") + "/.file-seeker/" + filepath.Base(filename)
 }
 func getLine(num int, file *os.File, db *leveldb.DB) (string, error) {
     data, err := db.Get([]byte(strconv.Itoa(num)), nil)
