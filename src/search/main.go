@@ -66,7 +66,9 @@ func buildAllIndex(files ...string) {
 }
 
 func getIndexDb(filename string) string {
-    return os.Getenv("HOME") + "/.file-seeker/" + filepath.Base(filename)
+    name, _ := filepath.Abs(filename)
+    name = strings.Replace(name[1:], "/", "-", -1)
+    return os.Getenv("HOME") + "/.file-seeker/" + name
 }
 func getLine(num int, file *os.File, db *leveldb.DB) (string, error) {
     data, err := db.Get([]byte(strconv.Itoa(num)), nil)
@@ -123,7 +125,7 @@ func getSameLineAround(keyword string, i int, file *os.File, db *leveldb.DB, mid
     }
     return index_arr, line_arr
 }
-func find(keyword string, i int, file *os.File, db *leveldb.DB) (int, string, error) {
+func find(keyword string, i int, file *os.File, db *leveldb.DB) ([]int, []string, error) {
     data, _ := db.Get([]byte("0"), nil)
     _high, _ := strconv.Atoi(string(data))
     low, high := 1, _high
@@ -137,14 +139,16 @@ func find(keyword string, i int, file *os.File, db *leveldb.DB) (int, string, er
             target = tokens[i-1]
         }
         if target == keyword {
-            return mid, line, nil
+            //return mid, line, nil
+            x, y := getSameLineAround(keyword, i, file, db, mid, line)
+            return x, y, nil
         } else if target < keyword {
             low = mid + 1
         } else {
             high = mid - 1
         }
     }
-    return 0, "", errors.New("Can't found " + keyword)
+    return []int{}, []string{}, errors.New("Can't found " + keyword)
 }
 
 func findAll(keyword string, index int, files []*os.File, dbs []*leveldb.DB) {
@@ -152,8 +156,10 @@ func findAll(keyword string, index int, files []*os.File, dbs []*leveldb.DB) {
     for i := 0; i < len(files); i++ {
         go func(i int) {
             name := files[i].Name()
-            if id, line, err := find(keyword, index, files[i], dbs[i]); err == nil {
-                fmt.Printf("%v:%v: %v\n", name, id, line)
+            if ids, lines, err := find(keyword, index, files[i], dbs[i]); err == nil {
+                for j, line := range lines {
+                    fmt.Printf("%v:%v: %v\n", name, ids[j], line)
+                }
             }
             sig <- name
         }(i)
